@@ -1,0 +1,35 @@
+@model BullfireSample.Models.CreateStatusItemRequest
+@{
+    ViewData["Title"] = "New scheduled item";
+}
+
+<section class="page-header">
+    <h1>New scheduled item</h1>
+    <a asp-action="Index" class="btn-secondary">← Back to list</a>
+</section>
+
+<form asp-action="Create" method="post" class="card">
+    <div class="field">
+        <label asp-for="Title">Title</label>
+        <input asp-for="Title" type="text" placeholder="e.g. 'Send invoice reminder'" />
+        <span asp-validation-for="Title" class="error"></span>
+    </div>
+
+    <div class="field">
+        <label asp-for="TargetStatus">Target status</label>
+        <select asp-for="TargetStatus" asp-items="Html.GetEnumSelectList<BullfireSample.Models.ItemStatus>()"></select>
+        <span class="hint">This is the status the item will be moved to when the schedule fires.</span>
+    </div>
+
+    <div class="field">
+        <label asp-for="ScheduledFor">Change status at</label>
+        <input asp-for="ScheduledFor" type="datetime-local" />
+        <span class="hint">Pick any time — even just 10 seconds in the future. Bullfire holds the job in the delayed zset until then, then a worker picks it up and applies the status change.</span>
+        <span asp-validation-for="ScheduledFor" class="error"></span>
+    </div>
+
+    <div class="actions">
+        <button type="submit" class="btn-primary">Schedule status change</button>
+        <a asp-action="Index" class="btn-link">Cancel</a>
+    </div>
+</form>

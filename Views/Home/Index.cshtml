@@ -1,0 +1,62 @@
+@model IReadOnlyList<BullfireSample.Models.StatusItem>
+@{
+    ViewData["Title"] = "Items";
+}
+
+<section class="page-header">
+    <h1>Scheduled status items</h1>
+    <a asp-action="Create" class="btn-primary">+ New scheduled item</a>
+</section>
+
+<p class="hint">
+    This page auto-refreshes every 2 seconds. Create a new item with a short delay,
+    then watch its <strong>Current status</strong> flip from <em>Pending</em> to your
+    chosen target when the schedule time arrives — the change is applied by a Bullfire
+    background worker, not by anything in the web request.
+</p>
+
+@if (!Model.Any())
+{
+    <div class="empty">
+        Nothing here yet. <a asp-action="Create">Create your first scheduled item</a>.
+    </div>
+}
+else
+{
+    <table class="items">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Current status</th>
+                <th>Target</th>
+                <th>Scheduled for (UTC)</th>
+                <th>Created (UTC)</th>
+                <th>Completed (UTC)</th>
+                <th>Job id</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.Title</td>
+                    <td>
+                        <span class="status status-@item.CurrentStatus.ToString().ToLowerInvariant()">
+                            @item.CurrentStatus
+                        </span>
+                    </td>
+                    <td class="muted">@item.TargetStatus</td>
+                    <td class="mono">@item.ScheduledFor.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td class="mono muted">@item.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td class="mono muted">@(item.CompletedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "—")</td>
+                    <td class="mono muted">@(item.JobId ?? "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<script>
+    // Simple polling auto-refresh so you can see the status change in real time.
+    setTimeout(() => location.reload(), 2000);
+</script>

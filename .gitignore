@@ -1,0 +1,27 @@
+## .NET build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+*.user
+*.suo
+artifacts/
+**/TestResults/
+
+## IDE
+.vs/
+.vscode/
+.idea/
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## NuGet local source (not distributed)
+NuGet.Config
+
+## Environment
+*.env
+appsettings.Development.json

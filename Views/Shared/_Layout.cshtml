@@ -1,0 +1,35 @@
+@{
+    var pageTitle = ViewData["Title"] as string;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@pageTitle — Bullfire Status Scheduler</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="topbar">
+        <a asp-controller="Home" asp-action="Index" class="brand">
+            🔥 <span>Bullfire Status Scheduler</span>
+        </a>
+        <nav>
+            <a asp-controller="Home" asp-action="Index">Items</a>
+            <a asp-controller="Home" asp-action="Create">+ New</a>
+            <a href="/bullfire" target="_blank">Dashboard ↗</a>
+        </nav>
+    </header>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <footer>
+        <small>
+            Sample app demonstrating Bullfire background jobs. Backend queue:
+            <code>status-updates</code>. Redis: localhost:6379.
+        </small>
+    </footer>
+</body>
+</html>
