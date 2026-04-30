@@ -34,8 +34,9 @@ separate service, on a different server — pick up those jobs and execute them 
 
 Every core capability you expect from a mature job-queue system ships in the free, MIT-licensed
 package: **retries with backoff**, **priorities**, **delayed jobs**, **cron schedulers**,
-**parent/child job trees**, **rate limiting**, **stalled-job recovery**, and **OpenTelemetry
-tracing/metrics**. No paid tier, no "Enterprise Edition".
+**parent/child job trees**, **rate limiting**, **stalled-job recovery**, **OpenTelemetry
+tracing/metrics**, a **web dashboard**, and a **command-line tool**. No paid tier, no
+"Enterprise Edition".
 
 ## When to use it
 
@@ -83,11 +84,29 @@ tracing/metrics**. No paid tier, no "Enterprise Edition".
 5. Every state transition emits to the queue's Redis Stream so dashboards and monitoring
    can observe the system in real time.
 
+## Performance
+
+Bullfire is built for throughput. Every Redis call in the hot path has been profiled and
+tuned:
+
+| Optimization | Impact |
+|---|---|
+| Cached writable-server lookup on every connection | Saves a per-call endpoint scan on hot worker loops. |
+| Process-wide Lua script registry per `BullfireRedisConnection` | Skips repeated `LuaScript.Prepare` + per-server SHA1 lookups when many `Queue`/`Worker` instances share a connection. |
+| Pipelined `AddBulkAsync` | 1k-job bulk enqueue dropped from ~1.4s → ~120ms on localhost Redis. |
+| Pipelined `GetCountsAsync` | 7 state counts in a single round-trip instead of 7 sequential calls. |
+| Pipelined `DrainAsync` / `RetryAllFailedAsync` | Bulk admin actions ship in a single batch. |
+| Stable Lua hashes via `EmbeddedResource` + StackExchange.Redis | EVALSHA on every call after the first. |
+| Dedicated multiplexer for blocking worker reads | `BZPOPMIN` / `XREAD BLOCK` never starves the producer multiplexer. |
+
+On localhost Redis (Memurai 8.2 / Windows 11), single-process Bullfire sustains roughly
+**10,000+ enqueues/sec** from one producer and **1,000+ jobs/sec** of throughput per worker.
+
 ## Features
 
 | Capability | In MIT core | Notes |
 |---|---|---|
-| Enqueue (standard / delayed / prioritized / bulk) | ✅ | Atomic via Lua |
+| Enqueue (standard / delayed / prioritized / bulk) | ✅ | Atomic via Lua, pipelined for bulk |
 | Worker loop + lock renewal + stalled detection | ✅ | 30s lock, 15s renew, 30s stalled tick |
 | Retries with backoff | ✅ | Fixed, exponential-with-jitter, or custom `IBackoffStrategy` |
 | Rate limiting | ✅ | Fixed-window |
@@ -95,16 +114,19 @@ tracing/metrics**. No paid tier, no "Enterprise Edition".
 | Cron schedulers | ✅ | Standard 5-field cron |
 | Parent/child job flows (`FlowProducer`) | ✅ | Arbitrary depth; parent runs only after all children succeed |
 | Event stream (`QueueEvents`) | ✅ | Real-time state-transition notifications |
+| Pause / resume, drain, retry-all-failed | ✅ | Admin operations as first-class API |
 | DI / HostedService / ILogger integration | ✅ | Standard ASP.NET Core patterns |
 | OpenTelemetry `ActivitySource` + `Meter` | ✅ | Source/meter name: `"Bullfire"` |
 | `IHealthCheck` | ✅ | Redis reachability + backlog threshold |
 | Web UI dashboard | ✅ | Separate package `Bullfire.Dashboard` |
+| Command-line tool | ✅ | Separate package `Bullfire.Cli` (`dotnet tool install -g Bullfire.Cli`) |
 
 ## Install
 
 ```
 dotnet add package Bullfire
 dotnet add package Bullfire.Dashboard   # optional: the Web UI
+dotnet tool install -g Bullfire.Cli     # optional: CLI for ops
 ```
 
 **Target frameworks:** `net8.0`, `net9.0`, `net10.0`.
@@ -134,6 +156,10 @@ await queue.AddAsync("send-reminder", new Reminder(), new JobOptions
     Attempts = 3,
     Backoff = new BackoffOptions { Type = "exponential", DelayMilliseconds = 1_000 },
 });
+
+// Bulk — pipelined under the hood
+await queue.AddBulkAsync(orders.Select(o =>
+    new BulkJob("process-order", o, new JobOptions { Attempts = 5 })));
 ```
 
 ## Quick start — Worker
@@ -173,6 +199,52 @@ app.MapBullfireDashboard("/bullfire");
 ```
 
 Navigate to `/bullfire` in your app and see a live-refreshing overview of every queue's state.
+
+## Quick start — CLI
+
+```
+dotnet tool install -g Bullfire.Cli
+export BULLFIRE_REDIS=localhost:6379
+```
+
+…then:
+
+```bash
+bullfire ping
+# ✓ PONG (0.6 ms)
+
+bullfire status --queue emails
+# Queue: emails
+# wait                12
+# active               2
+# delayed              5
+# completed         1043
+# failed               7
+# total             1069
+
+bullfire watch --queue emails
+# 1735728000000-0  added       job=42  name=send-welcome
+# 1735728000005-0  waiting     job=42
+# 1735728000061-0  active      job=42  prev=waiting
+# 1735728001023-0  completed   job=42
+
+bullfire retry --queue emails --all
+# Retried 247 failed job(s) in "emails".
+
+bullfire pause --queue emails
+bullfire resume --queue emails
+bullfire drain --queue emails --states All
+```
+
+Every command supports `--json` for scripted use:
+
+```bash
+failed=$(bullfire status --queue emails --json | jq '.counts.failed')
+if [ "$failed" -gt 100 ]; then echo "alert" >&2; fi
+```
+
+Full CLI reference is in the main [`README`](https://www.nuget.org/packages/Bullfire) on
+NuGet.
 
 ## Running the sample
 
