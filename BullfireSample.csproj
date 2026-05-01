@@ -12,8 +12,8 @@
       Installed from NuGet. No project references into the Bullfire source tree — this sample
       proves the published NuGet packages work end-to-end exactly the way a real user consumes them.
     -->
-    <PackageReference Include="Bullfire" Version="1.3.0" />
-    <PackageReference Include="Bullfire.Dashboard" Version="1.3.0" />
+    <PackageReference Include="Bullfire" Version="1.3.1" />
+    <PackageReference Include="Bullfire.Dashboard" Version="1.3.1" />
   </ItemGroup>
 
 </Project>
