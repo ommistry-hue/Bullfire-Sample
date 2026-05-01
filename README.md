@@ -109,7 +109,7 @@ On localhost Redis (Memurai 8.2 / Windows 11), single-process Bullfire sustains 
 | Enqueue (standard / delayed / prioritized / bulk) | ✅ | Atomic via Lua, pipelined for bulk |
 | Worker loop + lock renewal + stalled detection | ✅ | 30s lock, 15s renew, 30s stalled tick |
 | Retries with backoff | ✅ | Fixed, exponential-with-jitter, or custom `IBackoffStrategy` |
-| Rate limiting | ✅ | Fixed-window |
+| Rate limiting | ✅ | Fixed-window, sliding-window, and **per-group** (e.g. per-tenant) |
 | `RemoveOnComplete` / `KeepLast(N)` truncation | ✅ | |
 | Cron schedulers | ✅ | Standard 5-field cron |
 | Parent/child job flows (`FlowProducer`) | ✅ | Arbitrary depth; parent runs only after all children succeed |
@@ -120,6 +120,7 @@ On localhost Redis (Memurai 8.2 / Windows 11), single-process Bullfire sustains 
 | `IHealthCheck` | ✅ | Redis reachability + backlog threshold |
 | Web UI dashboard | ✅ | Separate package `Bullfire.Dashboard` |
 | Command-line tool | ✅ | Separate package `Bullfire.Cli` (`dotnet tool install -g Bullfire.Cli`) |
+| **Hangfire-compat layer** | ✅ | Separate package `Bullfire.Hangfire.Compat` — `BackgroundJob.Enqueue`, `RecurringJob.AddOrUpdate`, `Cron.*`. Drop-in for teams migrating off Hangfire. |
 
 ## Install
 
